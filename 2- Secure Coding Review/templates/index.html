@@ -1,17 +1,14 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8">
-    <title>Home</title>
-    <style>
-        button {
-            width: 100px;
-            align-self: center;
-        }
-    </style>
+    <meta charset="UTF-8">
+    <title>Home Page</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <h1>Hello, World!</h1>
-    <button onclick="location.href='/login'">Go to Login</button>
+    <h1>Welcome to the secure flask app</h1>
+    <br>
+    <a href="{{ url_for('login') }}">Login Here</a>
 </body>
 </html>
+
