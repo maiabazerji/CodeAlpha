@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Message Page</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>Write and Submit your feedback</h1>
+    <form id="feedback-form">
+        <label for="message">Message:</label><br>
+        <textarea id="feedback-message" name="message" rows="4" cols="50"></textarea><br><br>
+        <button type="submit">Submit</button>
+        <br><br>
+        <a href="{{ url_for('logout') }}">Logout Here</a>
+    </form>
+    <div id="thankyou-note" style="display:none;">
+        Thank you for your feedback!
+    </div>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('#feedback-form').submit(function(event) {
+                event.preventDefault(); // Prevent form submission
+                // Perform AJAX request
+                $.ajax({
+                    url: '/submit',
+                    type: 'POST',
+                    data: $(this).serialize(),
+                    success: function(response) {
+                        if (response.status === "success") {
+                            $('#thankyou-note').show();
+                            $('#feedback-message').val(''); // Clear the textarea
+                        } else {
+                            alert('An error occurred. Please try again.');
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error("Error details:", xhr, status, error);
+                        alert('An error occurred. Please try again.');
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
