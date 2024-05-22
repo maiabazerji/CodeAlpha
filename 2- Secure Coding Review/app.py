@@ -1,92 +1,55 @@
-import os
-import sqlite3
-
-from dotenv import load_dotenv
-from flask import Flask, g, jsonify, render_template, request
-from werkzeug.security import check_password_hash
-from werkzeug.utils import secure_filename
-
-load_dotenv()  # Load environment variables
+from flask import Flask, render_template, request, redirect, url_for, session, flash
+from werkzeug.security import generate_password_hash, check_password_hash
+import re
+from flask import jsonify
 
 app = Flask(__name__)
-# app.config['SECRET_KEY'] = os.urandom(24)
-# app.config['SESSION_COOKIE_SECURE'] = True
-# app.config['REMEMBER_COOKIE_SECURE'] = True
-# app.config['SESSION_COOKIE_HTTPONLY'] = True
-# app.config['REMEMBER_COOKIE_HTTPONLY'] = True
-# app.config['SESSION_PROTECTION'] = 'strong'
+app.secret_key = 'supersecretkey'  # Use a more secure key in production
 
+# In-memory user storage for demonstration purposes
+users = {'admin': generate_password_hash('password123')}
 
-# Load configuration from environment variables
-app.config["SECRET_KEY"] = os.getenv("SECRET_KEY")
-app.config["DATABASE"] = os.getenv("DATABASE_URL", "users.db")
+# Home Page
+@app.route('/')
+def home():
+    return render_template('index.html')
 
-
-def get_db():
-    if "db" not in g:
-        print("Database path:", app.config["DATABASE"])  # Add this line to debug
-        g.db = sqlite3.connect(app.config["DATABASE"])
-    return g.db
-
-
-@app.teardown_appcontext
-def close_db(exception):
-    db = g.pop("db", None)
-    if db is not None:
-        db.close()
-
-
-@app.route("/")
-def index():
-    return render_template("index.html")
-
-
-@app.route("/login", methods=["GET", "POST"])
+# Login Page
+@app.route('/login', methods=['GET', 'POST'])
 def login():
-    if request.method == "POST":
-        username = request.form["username"]
-        password = request.form["password"]
-
-        # Basic input validation
-        if not username or not password:
-            return jsonify({"message": "Username and password are required"}), 400
-
-        db = get_db()
-        user = db.execute(
-            "SELECT * FROM users WHERE username = ?", (username,)
-        ).fetchone()
-        if user and check_password_hash(user["password"], password):
-            return jsonify({"message": "Login successful"})
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        
+        if username in users and check_password_hash(users[username], password):
+            session['username'] = username
+            return redirect(url_for('message'))
         else:
-            return jsonify({"message": "Login failed"}), 401
-    return render_template("login.html")
+            flash('Invalid credentials. Please try again.', 'danger')
+    return render_template('login.html')
 
+# Message Page
+@app.route('/message')
+def message():
+    if 'username' not in session:
+        flash('You need to log in first.', 'danger')
+        return redirect(url_for('login'))
+    return render_template('message.html', username=session['username'])
 
-def allowed_file(filename):
-    return "." in filename and filename.rsplit(".", 1)[1].lower() in {
-        "txt",
-        "pdf",
-        "png",
-        "jpg",
-        "jpeg",
-        "gif",
-    }
+@app.route('/submit', methods=['POST'])
+def submit_feedback():
+    message = request.form.get('message')
+    if message:
+        # Process the message as needed
+        return jsonify({"status": "success"})
+    return jsonify({"status": "error"}), 400
 
+# Logout
+@app.route('/logout')
+def logout():
+    session.pop('username', None)
+    flash('You have been logged out.', 'info')
+    return redirect(url_for('login'))
 
-@app.route("/upload", methods=["POST"])
-def upload_file():
-    if "file" not in request.files:
-        return jsonify({"message": "No file part"}), 400
-    file = request.files["file"]
-    if file.filename == "":
-        return jsonify({"message": "No selected file"}), 400
-    if file and allowed_file(file.filename):
-        filename = secure_filename(file.filename)
-        file.save(os.path.join("uploads", filename))
-        return jsonify({"message": "File uploaded successfully", "filename": filename})
-    else:
-        return jsonify({"message": "Invalid file type"}), 400
-
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     app.run(debug=True)
